@@ -7,7 +7,7 @@ from datetime import datetime
 import requests
 import certifi
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, helpers
 
 # Imports from app
 from middleware.config import (
@@ -21,8 +21,8 @@ from middleware.config import (
 urllib3.disable_warnings()
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-# Context Setup
 
+# Context Setup
 base_url = 'https://context.newsai.org/api'
 
 # Elasticsearch setup
@@ -53,12 +53,18 @@ def get_login_token():
     return token
 
 
-def sync_entities_es(entity):
-    if entity:
-        res = es.index(index="entities", doc_type='entity',
-                       id=entity['id'], body=entity)
+def sync_entities_es(entities):
+    if entities:
+        to_append = []
+        for entity in entities:
+            doc = {
+                '_type': 'entity',
+                '_index': 'entities',
+                'data': entity
+            }
+            to_append.append(doc)
+        res = helpers.bulk(es, to_append)
         print res
-        print res['created']
 
 
 def get_entities():
@@ -72,18 +78,18 @@ def get_entities():
     r = requests.get(base_url + '/entities/',
                      headers=headers, verify=False)
     entities = r.json()
-    for x in range(1, entities['count']):
+    offset = 100
+    for x in range(0, entities['count'], offset):
         print x
-        r = requests.get(base_url + '/entities/' + str(x) + '/',
+        r = requests.get(base_url + '/entities/?limit=' + str(offset) + '&offset=' + str(x),
                          headers=headers, verify=False)
         entity = r.json()
-        if 'id' in entity:
-            sync_entities_es(entity)
+        sync_entities_es(entity['results'])
 
 
 def reset_elastic():
     es.indices.delete(index='entities', ignore=[400, 404])
-    es.indices.create(index='entities', ignore=400)
+    es.indices.create(index='entities', ignore=[400, 404])
     get_entities()
 
 

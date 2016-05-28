@@ -53,13 +53,13 @@ def get_login_token():
     return token
 
 
-def sync_entities_es(entities):
+def sync_entities_es(new_index_name, entities):
     if entities:
         to_append = []
         for entity in entities:
             doc = {
                 '_type': 'entity',
-                '_index': 'entities',
+                '_index': new_index_name,
                 'data': entity
             }
             to_append.append(doc)
@@ -67,7 +67,7 @@ def sync_entities_es(entities):
         print res
 
 
-def get_entities():
+def get_entities(new_index_name):
     token = get_login_token()
     headers = {
         "content-type": "application/json",
@@ -84,7 +84,43 @@ def get_entities():
         r = requests.get(base_url + '/entities/?limit=' + str(offset) + '&offset=' + str(x),
                          headers=headers, verify=False)
         entity = r.json()
-        sync_entities_es(entity['results'])
+        sync_entities_es(new_index_name, entity['results'])
+
+
+def create_alias():
+    es.indices.put_alias(index='entities', name='entity')
+
+
+def change_alias(new_index_name):
+    es.indices.delete_alias(index='_all', name='entity')
+    es.indices.put_alias(index=new_index_name, name='entity')
+
+
+def delete_previous_index(previous_index):
+    es.indices.delete(index='entities', ignore=[400, 404])
+
+
+def get_newest_index():
+    return es.cat.indices(format='json')[1]
+
+
+def generate_next_index(index):
+    if 'v' in index:
+        index = index.split('_v')
+        index_number = int(index[1]) + 1
+        index = index[0] + '_v' + str(index_number)
+    else:
+        index = index + '_v1'
+    return index
+
+
+def deploy_new_update():
+    previous_index = get_newest_index()['index']
+    new_index = generate_next_index(previous_index)
+    es.indices.create(index=new_index, ignore=[400, 404])
+    get_entities(new_index)
+    change_alias(new_index)
+    delete_previous_index(previous_index)
 
 
 def reset_elastic():
@@ -92,5 +128,4 @@ def reset_elastic():
     es.indices.create(index='entities', ignore=[400, 404])
     get_entities()
 
-
-reset_elastic()
+deploy_new_update()

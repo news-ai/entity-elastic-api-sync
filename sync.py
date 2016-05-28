@@ -57,7 +57,8 @@ def sync_entities_es(entity):
     if entity:
         res = es.index(index="entities", doc_type='entity',
                        id=entity['id'], body=entity)
-        print(res['created'])
+        print res
+        print res['created']
 
 
 def get_entities():
@@ -68,9 +69,22 @@ def get_entities():
         "authorization": "Bearer " + token
     }
 
-    r = requests.get(base_url + '/entities/1/',
+    r = requests.get(base_url + '/entities/',
                      headers=headers, verify=False)
-    entity = r.json()
-    return sync_entities_es(entity)
+    entities = r.json()
+    for x in range(1, entities['count']):
+        print x
+        r = requests.get(base_url + '/entities/' + str(x) + '/',
+                         headers=headers, verify=False)
+        entity = r.json()
+        if 'id' in entity:
+            sync_entities_es(entity)
 
-print get_entities()
+
+def reset_elastic():
+    es.indices.delete(index='entities', ignore=[400, 404])
+    es.indices.create(index='entities', ignore=400)
+    get_entities()
+
+
+reset_elastic()

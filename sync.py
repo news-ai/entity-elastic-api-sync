@@ -97,7 +97,7 @@ def change_alias(new_index_name):
 
 
 def delete_previous_index(previous_index):
-    es.indices.delete(index='entities', ignore=[400, 404])
+    es.indices.delete(index=previous_index, ignore=[400, 404])
 
 
 def get_newest_index():

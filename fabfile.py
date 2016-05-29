@@ -21,10 +21,6 @@ def update_server():
     update_upgrade()
 
 
-def get_logs():
-    get('/var/apps/log', '%(path)s')
-
-
 def celery_purge():
     with cd("/var/apps/elastic-api-sync"), prefix('source /var/apps/env/bin/activate'):
         with cd("/var/apps/elastic-api-sync"):

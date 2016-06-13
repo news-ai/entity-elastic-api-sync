@@ -101,7 +101,7 @@ def delete_previous_index(previous_index):
 
 
 def get_newest_index():
-    indicies = es.cat.indices(format='json')
+    indices = es.cat.indices(format='json')
     for i in indices:
         if 'entities' in i:
             return i

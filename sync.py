@@ -105,7 +105,6 @@ def get_newest_index():
     for i in indices:
         if 'entities' in i:
             return i
-    return 'entities_v1'
 
 
 def generate_next_index(index):
